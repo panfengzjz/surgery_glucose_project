@@ -92,6 +92,7 @@ class Patient:
     def _initItems(self):
         self.name = ""
         self.gender = ""
+        self.age = 0
         self.dischargeDate = ""
         self.los = 0
         self.deptName = ""
@@ -103,6 +104,7 @@ class Patient:
     def set_basic_info(self, data):
         self.name = data["姓名"].iloc[0].strip()
         self.gender = data["性别"].iloc[0].strip()
+        self.age = data["年龄"].iloc[0]
         self.dischargeDate = to_datetime(data["出院时间"].iloc[0])
         self.los = (self.dischargeDate - self.admitDate).days
         self.admitDiag = data["临床诊断"].iloc[0]
@@ -110,8 +112,9 @@ class Patient:
         self.exam.set_exam_info(data)
 
     def set_surgery_info(self, data):
+        self.deptName = data["deptname"].iloc[0].strip()
         for i in range(data.shape[0]):
-            new_list = [data["admitdiag"].iloc[i], data["applytime"].iloc[i],
+            new_list = [data["admitdiag"].iloc[i], to_datetime(data["applytime"].iloc[i]),
                         data["presurgery"].iloc[i], data["surgeryname"].iloc[i],
                         data["surgerytype"].iloc[i], data["surgerykind"].iloc[i]]
             self.surgeryList.append(new_list)
@@ -120,7 +123,7 @@ class Patient:
         for i in range(data.shape[0]):
             t = to_datetime(data["采血时间"].iloc[i])
             if (t >= self.admitDate) and (t <= self.dischargeDate):
-                new_list = [data["血糖数值"].iloc[i], data["采血时间"].iloc[i],
+                new_list = [data["血糖数值"].iloc[i], to_datetime(data["采血时间"].iloc[i]),
                             data["采血日期"].iloc[i], data["时间点"].iloc[i],
                             data["时间点分类"].iloc[i], data["低血糖复测"].iloc[i],
                             data["低血糖复测时间"].iloc[i]]
