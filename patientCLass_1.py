@@ -1,6 +1,6 @@
 # coding: utf-8
 from pandas import to_datetime
-from numpy import std
+from numpy import std, nan
 
 class Glucose:  # 要先合并三个血糖csv
     def __init__(self):
@@ -20,25 +20,31 @@ class Glucose:  # 要先合并三个血糖csv
         self.timePointType.append(l[3])
 
 class Patient:
-    def __init__(self, admitNo):
-        self.admitNo = admitNo
+    def __init__(self, admitNo_modify):
+        self.admitNo_modify = admitNo_modify
         self._initItems()
 
     def _initItems(self):
         self.name = ""
         self.gender = ""
         self.age = 0
+        self.admitNo = 0
         self.deptName = ""
 
         self.glucose = Glucose()
 
     def set_basic_info(self, data):
+        if (data.empty):
+            return
         self.name = data["姓名"].iloc[0].strip()
         self.gender = data["性别"].iloc[0].strip()
         self.age = data["年龄"].iloc[0]
+        self.admitNo = data["住院号"].iloc[0]
         self.deptName = data["病区"].iloc[0].strip()
 
     def set_glucose_info(self, data):
+        if (data.empty):
+            return
         for i in range(data.shape[0]):
             #t = to_datetime(data["采血时间"].iloc[i])
             new_list = [data["血糖数值"].iloc[i], to_datetime(data["采血时间"].iloc[i]),
@@ -53,35 +59,39 @@ class GlucoseSummary:
         self._initItems()
 
     def _initItems(self):
-        self.num = 0.0
-        self.avg = 0.0
-        self.sd = 0.0
-        self.min = 0.0
-        self.max = 0.0
-        self.vhPerc = 0.0   # >13.9
-        self.hPerc = 0.0    # >10.0
-        self.pPerc = 0.0    # 3.9~10.0
-        self.lPerc = 0.0    # <3.9
-        self.vlPerc = 0.0
+        self.num = nan
+        self.avg = nan
+        self.sd = nan
+        self.min = nan
+        self.max = nan
+        self.vhPerc = nan   # >13.9
+        self.hPerc = nan    # >10.0
+        self.pPerc = nan    # 3.9~10.0
+        self.lPerc = nan    # <3.9
+        self.vlPerc = nan
 
     def set_all_glucose(self, Glu, type):
         # type0: all glucose
         # type1: pre-meal glucose
         # type2: post-meal glucose
         # type3: pre-sleep glucose
+        # type4: 6:00 glucose
 
         gluList = []
-        for i in range(len(Glu.timePointType)):
+        for i in range(len(Glu.glu)):
             if (type == 0):
                 gluList.append(Glu.glu[i])
             elif (type == Glu.timePointType[i]):
+                gluList.append(Glu.glu[i])
+            elif (Glu.timePoint[i] == "6点"):
+                # type == 4 的情况
                 gluList.append(Glu.glu[i])
 
         self.num = len(gluList)
         if (self.num == 0):
             return
         self.avg = sum(gluList) / len(gluList)
-        self.sd = std(gluList)
+        self.sd = std(gluList) if (self.num >= 2) else nan
         self.min = min(gluList)
         self.max = max(gluList)
 
@@ -112,6 +122,7 @@ class PatientSummary:
 
     def _initItems(self):
         self.admitNo = 0
+        self.admitNo_modify = ""
         self.name = ""
         self.gender = ""
         self.age = 0
@@ -121,10 +132,11 @@ class PatientSummary:
         self.preMealGlucose = GlucoseSummary()
         self.postMealGlucose = GlucoseSummary()
         self.preSleepGlucose = GlucoseSummary()
-        #self.deptName = ""
+        self.sixOClockGlucose = GlucoseSummary()
 
     def set_basic_info_s(self, patient):
         self.admitNo = patient.admitNo
+        self.admitNo_modify = patient.admitNo_modify
         self.name = patient.name
         self.gender = patient.gender
         self.age = patient.age
@@ -135,6 +147,7 @@ class PatientSummary:
         self.preMealGlucose.set_all_glucose(glucose, 1)
         self.postMealGlucose.set_all_glucose(glucose, 2)
         self.preSleepGlucose.set_all_glucose(glucose, 3)
+        self.sixOClockGlucose.set_all_glucose(glucose, 4)
         self.confirm_contain_all(glucose)
 
     def confirm_contain_all(self, glucose):
